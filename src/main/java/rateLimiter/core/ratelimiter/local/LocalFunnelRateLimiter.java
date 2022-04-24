@@ -4,9 +4,11 @@ import rateLimiter.config.BasicProperties;
 import rateLimiter.config.local.LocalFunnelProperties;
 import rateLimiter.core.ratelimiter.AbstractRateLimiter;
 
-;
+;import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class LocalFunnelRateLimiter extends AbstractRateLimiter {
+    private final Lock lock = new ReentrantLock();
     private final Funnel funnel = new Funnel();
 
     public LocalFunnelRateLimiter(BasicProperties basicProperties, LocalFunnelProperties properties) {
@@ -18,13 +20,18 @@ public class LocalFunnelRateLimiter extends AbstractRateLimiter {
     }
 
     @Override
-    public synchronized boolean limit() throws Exception {
-        long cur = System.currentTimeMillis();
-        if (cur - funnel.lastTick < funnel.interval)
-            return false;
-        else {
-            funnel.lastTick = cur;
-            return true;
+    public boolean limit() throws Exception {
+        try {
+            lock.lock();
+            long cur = System.currentTimeMillis();
+            if (cur - funnel.lastTick < funnel.interval)
+                return false;
+            else {
+                funnel.lastTick = cur;
+                return true;
+            }
+        } finally {
+            lock.unlock();
         }
     }
 

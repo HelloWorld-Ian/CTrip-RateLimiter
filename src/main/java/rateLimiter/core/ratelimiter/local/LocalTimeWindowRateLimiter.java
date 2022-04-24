@@ -5,6 +5,9 @@ import rateLimiter.config.BasicProperties;
 import rateLimiter.config.local.LocalTimeWindowProperties;
 import rateLimiter.core.ratelimiter.AbstractRateLimiter;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 /**
  * 本地时间窗限流
  *
@@ -12,6 +15,7 @@ import rateLimiter.core.ratelimiter.AbstractRateLimiter;
  * @date 2022/4/3
  */
 public class LocalTimeWindowRateLimiter extends AbstractRateLimiter {
+    private final Lock lock = new ReentrantLock();
     private final TimeWindow timeWindow=new TimeWindow();
 
     public LocalTimeWindowRateLimiter(BasicProperties basicProperties, LocalTimeWindowProperties strategy){
@@ -23,20 +27,25 @@ public class LocalTimeWindowRateLimiter extends AbstractRateLimiter {
     }
 
     @Override
-    public synchronized boolean limit() {
-        boolean pass=false;
-        long cur = System.currentTimeMillis();
-        if (cur - timeWindow.lastTick >= timeWindow.time) {
-            timeWindow.active=1;
-            timeWindow.lastTick=System.currentTimeMillis();
-            pass=true;
-        } else {
-            if (timeWindow.active<timeWindow.max){
-                timeWindow.active+=1;
+    public boolean limit() {
+        try {
+            lock.lock();
+            boolean pass=false;
+            long cur = System.currentTimeMillis();
+            if (cur - timeWindow.lastTick >= timeWindow.time) {
+                timeWindow.active=1;
+                timeWindow.lastTick=System.currentTimeMillis();
                 pass=true;
+            } else {
+                if (timeWindow.active<timeWindow.max){
+                    timeWindow.active+=1;
+                    pass=true;
+                }
             }
+            return pass;
+        } finally {
+            lock.unlock();
         }
-        return pass;
     }
 
     /**

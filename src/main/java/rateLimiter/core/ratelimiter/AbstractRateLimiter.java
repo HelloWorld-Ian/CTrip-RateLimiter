@@ -28,9 +28,9 @@ public abstract class AbstractRateLimiter implements RateLimiter {
         long retryPeriod = basicProperties.getRetryPeriod();
         boolean pass = false;
         while (!pass) {
-            if (limit()) {
+            if (limit())
                 pass = true;
-            } else if (!limitRetry) {
+            else if (!limitRetry) {
                 RateLimitLogger.infoLog("retry policy is forbidden, request is rejected");
                 break;
             } else {

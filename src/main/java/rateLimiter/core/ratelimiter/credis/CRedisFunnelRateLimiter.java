@@ -27,7 +27,6 @@ public class CRedisFunnelRateLimiter extends AbstractRateLimiter {
         String key = key(funnel.key);
         boolean cas = false;
         boolean[] pass = new boolean[]{false};
-
         while (!cas) {
             List<Object> ret = cacheProvider.execute((RedisCASAction) (r, watchedValues) -> {
                 String lastTickStr = watchedValues[0];

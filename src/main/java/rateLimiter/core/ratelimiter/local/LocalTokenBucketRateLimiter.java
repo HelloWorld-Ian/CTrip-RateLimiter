@@ -4,7 +4,11 @@ import rateLimiter.config.BasicProperties;
 import rateLimiter.config.local.LocalTokenBucketProperties;
 import rateLimiter.core.ratelimiter.AbstractRateLimiter;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 public class LocalTokenBucketRateLimiter extends AbstractRateLimiter {
+    private final Lock lock = new ReentrantLock();
     private final Bucket bucket=new Bucket();
 
     public LocalTokenBucketRateLimiter(BasicProperties basicProperties, LocalTokenBucketProperties strategy){
@@ -19,18 +23,22 @@ public class LocalTokenBucketRateLimiter extends AbstractRateLimiter {
 
     @Override
     public synchronized boolean limit() {
-        long increment =increment(bucket);
-        long curToken = bucket.tokens;
-
-        if (curToken > 0 || increment > 0) {
-            if(increment > 0) {
-                bucket.tokens = Math.min(bucket.capacity, curToken+increment) - 1;
-                bucket.lastTick = System.currentTimeMillis();
-            } else
-                bucket.tokens -= 1;
-            return true;
+        try {
+            lock.lock();
+            long increment = increment(bucket);
+            long curToken = bucket.tokens;
+            if (curToken > 0 || increment > 0) {
+                if(increment > 0) {
+                    bucket.tokens = Math.min(bucket.capacity, curToken+increment) - 1;
+                    bucket.lastTick = System.currentTimeMillis();
+                } else
+                    bucket.tokens -= 1;
+                return true;
+            }
+            return false;
+        } finally {
+            lock.unlock();
         }
-        return false;
     }
 
     /**
